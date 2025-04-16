@@ -15,7 +15,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	// DirectXCommonクラスが管理している、ウィンドウの幅と高さの値の取得
 	int32_t w = dxCommon->GetBackBufferWidth();
 	int32_t h = dxCommon->GetBackBufferHeight();
-	DebugText::GetInstance()->ConsolePrintf(std::format("width: {}, height: {}!n", w, h).c_str());
+	DebugText::GetInstance()->ConsolePrintf(std::format("width: {}, height: {}\n", w, h).c_str());
 
 	// DirectXCommonクラスが管理している、コマンドリストの取得
 	ID3D12GraphicsCommandList* commandList = dxCommon->GetCommandList();
@@ -67,7 +67,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	ID3DBlob* psBlod = nullptr;   // ピクセルシェーダオブジェクト
 	ID3DBlob* errorBlob = nullptr;// エラーオブジェクト
 	// 頂点シェーダの読み込みとコンパイル
-	std::wstring vsPath = L"Resources/shader/TestVS.hlsl";
+	std::wstring vsPath = L"Resources/shaders/TestVS.hlsl";
 	hr = D3DCompileFromFile(
 	    vsPath.c_str(), // シェーダファイル名
 	    nullptr,
@@ -76,9 +76,29 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, // デバッグ用設定
 	    0, &vsBlod, &errorBlob);
 	if (FAILED(hr)) {
-		DebugText::GetInstance()->ConsolePrintf(std::system_category().message(hr).c_str());
+		DebugText::GetInstance()->ConsolePrintf(
+			std::system_category().message(hr).c_str());
 		if (errorBlob) {
-			DebugText::GetInstance()->ConsolePrintf(reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+			DebugText::GetInstance()->ConsolePrintf(
+				reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+		}
+		assert(false);
+	}
+
+	std::wstring psFile = L"Resources/shaders/TestPS.hlsl";
+	hr = D3DCompileFromFile(
+	    psFile.c_str(), // シェーダファイル名
+	    nullptr,
+	    D3D_COMPILE_STANDARD_FILE_INCLUDE,               // インクルード可能にする
+	    "main", "ps_5_0",                                // エントリーポイント名、シェーダーモデル指定
+	    D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, // デバッグ用設定
+	    0, &psBlod, &errorBlob);
+	if (FAILED(hr)) {
+		DebugText::GetInstance()->ConsolePrintf(
+			std::system_category().message(hr).c_str());
+		if (errorBlob) {
+			DebugText::GetInstance()->ConsolePrintf(
+				reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
 		}
 		assert(false);
 	}
@@ -138,8 +158,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	// 頂点リソースにデータを書き込む
 	Vector4* vertexData = nullptr;
-	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	ver
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	vertexData[0] = {-0.5f, -0.5f, 0.0f}; // 左下
+	vertexData[1] = {0.0f, 0.5f, 0.0f};   // 上
+	vertexData[2] = {0.5f, -0.5f, 0.0f};  // 右下
+	// 頂点リソースのマップを解除する
+	vertexResource->Unmap(0, nullptr);
 
 	while (true) {
 		if (KamataEngine::Update()) {
@@ -148,9 +172,27 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 		dxCommon->PreDraw();
 
+		// コマンドを積む
+		commandList->SetGraphicsRootSignature(rootSignature);   // RootSignatureの設定
+		commandList->SetPipelineState(graphicsPipelineState);   // PSOの設定する
+		commandList->IASetVertexBuffers(0, 1, &vertexBufferView); // VBVの設定
+		// トポロジの設定
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		// 頂点数、インデックス数、インデックスの開始位置、インデックスのオフセット
+		commandList->DrawInstanced(3, 1, 0, 0);
+
 		dxCommon->PostDraw();
 	}
 
+	vertexResource->Release();
+	graphicsPipelineState->Release();
+	signatureBlob->Release();
+	if (errorBlob) {
+		errorBlob->Release();
+	}
+	rootSignature->Release();
+	vsBlod->Release();
+	psBlod->Release();
 
 	KamataEngine::Finalize();
 
