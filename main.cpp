@@ -159,9 +159,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 	// 頂点リソースにデータを書き込む
 	Vector4* vertexData = nullptr;
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	vertexData[0] = {-0.5f, -0.5f, 0.0f}; // 左下
-	vertexData[1] = {0.0f, 0.5f, 0.0f};   // 上
-	vertexData[2] = {0.5f, -0.5f, 0.0f};  // 右下
+	vertexData[0] = {-0.5f, -0.5f, 0.0f, 1.0f}; // 左下
+	vertexData[1] = { 0.0f,  0.5f, 0.0f, 1.0f};   // 上
+	vertexData[2] = { 0.5f, -0.5f, 0.0f, 1.0f};  // 右下
 	// 頂点リソースのマップを解除する
 	vertexResource->Unmap(0, nullptr);
 
